@@ -1,0 +1,62 @@
+---
+title: "Wypadki drogowe w podziale na powiaty"
+author: 
+output: html_document
+
+---
+
+
+```{r setup, include=FALSE, error=FALSE, warning = FALSE, message=FALSE}
+
+library(rgdal)
+library(rgeos)
+library(ggplot2)
+library(dplyr)
+library(plotly)
+library(rstudioapi)
+
+setwd(dirname(rstudioapi::getSourceEditorContext()$path))
+
+mapa_w<-readOGR("PRG_jednostki_administracyjne_2022/A01_Granice_wojewodztw.shp")
+mapa_woj<-fortify(mapa_w,region="JPT_KOD_JE")
+
+mapa<-readOGR("PRG_jednostki_administracyjne_2022/A02_Granice_powiatow.shp")
+mapa_nazwy <- mapa@data %>% select(JPT_KOD_JE, JPT_NAZWA_)
+mapa_df<-fortify(mapa,region="JPT_KOD_JE")
+mapa_df<-left_join(mapa_df, mapa_nazwy, by=c("id"="JPT_KOD_JE"))
+
+wypadki<-read.csv2("wypadki.txt")
+wypadki<-wypadki %>% mutate(ID_ini = substr(as.character(Kod),1,nchar(Kod)-3),
+                   ID = ifelse(nchar(ID_ini)==3,paste("0",ID_ini,sep=""),ID_ini)) %>% select(-c("Kod","ID_ini"))
+
+mapa2<-mapa_df %>% left_join(wypadki, by=c("id"="ID"))%>%rename(Powiat=JPT_NAZWA_,
+                                                                Wypadki_2022=y2022,
+                                                                Wypadki_2021=y2021,
+                                                                Wypadki_2020=y2020,
+                                                                Wojewodztwo=woj)
+a<-min(wypadki$y2022)
+b<-max(wypadki$y2022)
+# a=min(wypadki[[var_y]])
+# mapa2<-rename(mapa2,"{var_y}" := Wypadki)
+```
+
+<br/><br/>
+<br/><br/>
+
+```{r mapa, echo = FALSE, warning = FALSE, message=FALSE, fig.align='left', out.width = '110%', out.height='110%'}
+  
+mapa_plot<-ggplot(mapa2) + 
+  geom_polygon(aes(long, lat, group=group, Powiat=Powiat, Wojewodztwo=Wojewodztwo, fill=Wypadki_2022, Wypadki_2021=Wypadki_2021, Wypadki_2020=Wypadki_2020), color="gray", show.legend = FALSE) + 
+  geom_path(data=mapa_woj, aes(long, lat, group=group), linetype="longdash", color="black", show.legend = FALSE) + 
+  coord_map() + 
+  theme_void() + 
+  scale_fill_gradient2(low = "green",mid="orange", high="red", limits=c(a,b), midpoint=375) + 
+  ggtitle(label="Wypadki w Polsce w 2022 roku") + 
+  theme(plot.title = element_text(size=14, face="bold.italic", hjust=0.5))
+
+mapa_plotly<-ggplotly(mapa_plot,tooltip=c("Powiat","Wojewodztwo","Wypadki_2022","Wypadki_2021","Wypadki_2020")) %>%
+  layout(yaxis = list(showline = FALSE),xaxis = list(showline = FALSE), width = 1000, height=500)
+
+mapa_plotly
+  
+```
