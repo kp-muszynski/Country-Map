@@ -21,4 +21,5 @@ scale_fill_gradient2(low = "green",mid="orange", high="red", limits=c(a,b), midp
 At the end, the ggplotly function tranforms the plot, so that the user can utilize plotly functionalities, including zooming and the information provided in the  tooltip.
 
 Knitting to HTML produced *country_map.html* file, that is also provided in the repository.
-![The map]("Map_screen.png")
+
+![The map](Map_screen.png)
